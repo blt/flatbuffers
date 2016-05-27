@@ -66,6 +66,7 @@ std::string FlatCompiler::GetUsageString(const char* program_name) const {
       "  --version          Print the version number of flatc and exit.\n"
       "  --strict-json      Strict JSON: field names must be / will be quoted,\n"
       "                     no trailing commas in tables/vectors.\n"
+      "  --strict-rust      Follow naming conventions for Rust.\n"
       "  --allow-non-utf8   Pass non-UTF-8 input through parser and emit nonstandard\n"
       "                     \\x escapes in JSON. (Default is to raise parse error on\n"
       "                     non-UTF-8 input.)\n"
@@ -169,6 +170,8 @@ int FlatCompiler::Compile(int argc, const char** argv) {
         opts.keep_include_path = true;
       } else if(arg == "--strict-json") {
         opts.strict_json = true;
+      } else if(arg == "--strict-rust") {
+          opts.strict_rust = true;
       } else if(arg == "--allow-non-utf8") {
         opts.allow_non_utf8 = true;
       } else if(arg == "--no-js-exports") {

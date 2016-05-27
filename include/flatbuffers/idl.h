@@ -36,24 +36,24 @@ namespace flatbuffers {
 // Additionally, Parser::ParseType assumes bool..string is a contiguous range
 // of type tokens.
 #define FLATBUFFERS_GEN_TYPES_SCALAR(TD) \
-  TD(NONE,   "",       uint8_t,  byte,   byte,    byte,   uint8) \
-  TD(UTYPE,  "",       uint8_t,  byte,   byte,    byte,   uint8) /* begin scalar/int */ \
-  TD(BOOL,   "bool",   uint8_t,  boolean,byte,    bool,   bool) \
-  TD(CHAR,   "byte",   int8_t,   byte,   int8,    sbyte,  int8) \
-  TD(UCHAR,  "ubyte",  uint8_t,  byte,   byte,    byte,   uint8) \
-  TD(SHORT,  "short",  int16_t,  short,  int16,   short,  int16) \
-  TD(USHORT, "ushort", uint16_t, short,  uint16,  ushort, uint16) \
-  TD(INT,    "int",    int32_t,  int,    int32,   int,    int32) \
-  TD(UINT,   "uint",   uint32_t, int,    uint32,  uint,   uint32) \
-  TD(LONG,   "long",   int64_t,  long,   int64,   long,   int64) \
-  TD(ULONG,  "ulong",  uint64_t, long,   uint64,  ulong,  uint64) /* end int */ \
-  TD(FLOAT,  "float",  float,    float,  float32, float,  float32) /* begin float */ \
-  TD(DOUBLE, "double", double,   double, float64, double, float64) /* end float/scalar */
+  TD(NONE,   "",       uint8_t,  byte,   byte,    byte,   uint8,   u8) \
+  TD(UTYPE,  "",       uint8_t,  byte,   byte,    byte,   uint8,   u8) /* begin scalar/int */ \
+  TD(BOOL,   "bool",   uint8_t,  boolean,byte,    bool,   bool,    bool) \
+  TD(CHAR,   "byte",   int8_t,   byte,   int8,    sbyte,  int8,    i8) \
+  TD(UCHAR,  "ubyte",  uint8_t,  byte,   byte,    byte,   uint8,   u8) \
+  TD(SHORT,  "short",  int16_t,  short,  int16,   short,  int16,   i16) \
+  TD(USHORT, "ushort", uint16_t, short,  uint16,  ushort, uint16,  u16) \
+  TD(INT,    "int",    int32_t,  int,    int32,   int,    int32,   i32) \
+  TD(UINT,   "uint",   uint32_t, int,    uint32,  uint,   uint32,  u32) \
+  TD(LONG,   "long",   int64_t,  long,   int64,   long,   int64,   i64) \
+  TD(ULONG,  "ulong",  uint64_t, long,   uint64,  ulong,  uint64,  u64) /* end int */ \
+  TD(FLOAT,  "float",  float,    float,  float32, float,  float32, f32) /* begin float */ \
+  TD(DOUBLE, "double", double,   double, float64, double, float64, f64) /* end float/scalar */
 #define FLATBUFFERS_GEN_TYPES_POINTER(TD) \
-  TD(STRING, "string", Offset<void>, int, int, StringOffset, int) \
-  TD(VECTOR, "",       Offset<void>, int, int, VectorOffset, int) \
-  TD(STRUCT, "",       Offset<void>, int, int, int, int) \
-  TD(UNION,  "",       Offset<void>, int, int, int, int)
+  TD(STRING, "string", Offset<void>, int, int, StringOffset, int, i32) \
+  TD(VECTOR, "",       Offset<void>, int, int, VectorOffset, int, i32) \
+  TD(STRUCT, "",       Offset<void>, int, int, int, int, i32) \
+  TD(UNION,  "",       Offset<void>, int, int, int, int, i32)
 
 // The fields are:
 // - enum
@@ -63,12 +63,13 @@ namespace flatbuffers {
 // - Go type.
 // - C# / .Net type.
 // - Python type.
+// - Rust type.
 
 // using these macros, we can now write code dealing with types just once, e.g.
 
 /*
 switch (type) {
-  #define FLATBUFFERS_TD(ENUM, IDLTYPE, CTYPE, JTYPE, GTYPE, NTYPE, PTYPE) \
+  #define FLATBUFFERS_TD(ENUM, IDLTYPE, CTYPE, JTYPE, GTYPE, NTYPE, PTYPE, RTYPE) \
     case BASE_TYPE_ ## ENUM: \
       // do something specific to CTYPE here
     FLATBUFFERS_GEN_TYPES(FLATBUFFERS_TD)
@@ -85,13 +86,13 @@ switch (type) {
 __extension__  // Stop GCC complaining about trailing comma with -Wpendantic.
 #endif
 enum BaseType {
-  #define FLATBUFFERS_TD(ENUM, IDLTYPE, CTYPE, JTYPE, GTYPE, NTYPE, PTYPE) \
+#define FLATBUFFERS_TD(ENUM, IDLTYPE, CTYPE, JTYPE, GTYPE, NTYPE, PTYPE, RTYPE) \
       BASE_TYPE_ ## ENUM,
     FLATBUFFERS_GEN_TYPES(FLATBUFFERS_TD)
   #undef FLATBUFFERS_TD
 };
 
-#define FLATBUFFERS_TD(ENUM, IDLTYPE, CTYPE, JTYPE, GTYPE, NTYPE, PTYPE) \
+#define FLATBUFFERS_TD(ENUM, IDLTYPE, CTYPE, JTYPE, GTYPE, NTYPE, PTYPE, RTYPE) \
     static_assert(sizeof(CTYPE) <= sizeof(largest_scalar_t), \
                   "define largest_scalar_t as " #CTYPE);
   FLATBUFFERS_GEN_TYPES(FLATBUFFERS_TD)
@@ -367,6 +368,7 @@ struct IDLOptions {
   std::string go_namespace;
   bool reexport_ts_modules;
   bool protobuf_ascii_alike;
+  bool strict_rust;
 
   // Possible options for the more general generator below.
   enum Language {
@@ -414,6 +416,7 @@ struct IDLOptions {
       skip_flatbuffers_import(false),
       reexport_ts_modules(true),
       protobuf_ascii_alike(false),
+      strict_rust(false),
       lang(IDLOptions::kJava),
       lang_to_generate(0) {}
 };
@@ -734,6 +737,13 @@ extern bool GenerateCSharp(const Parser &parser,
 extern bool GenerateGeneral(const Parser &parser,
                             const std::string &path,
                             const std::string &file_name);
+
+// Generate Rust files from the definitions in the Parser object.
+// See idl_gen_rust.cpp.
+extern bool GenerateRust(const Parser &parser,
+                         const std::string &path,
+                         const std::string &file_name);
+
 
 // Generate a schema file from the internal representation, useful after
 // parsing a .proto schema.

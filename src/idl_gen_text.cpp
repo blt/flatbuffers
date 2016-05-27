@@ -136,7 +136,7 @@ template<> bool Print<const void *>(const void *val,
       // Call PrintVector above specifically for each element type:
       switch (type.base_type) {
         #define FLATBUFFERS_TD(ENUM, IDLTYPE, CTYPE, JTYPE, GTYPE, NTYPE, \
-          PTYPE) \
+                               PTYPE, RTYPE) \
           case BASE_TYPE_ ## ENUM: \
             if (!PrintVector<CTYPE>( \
                   *reinterpret_cast<const Vector<CTYPE> *>(val), \
@@ -219,7 +219,7 @@ static bool GenStruct(const StructDef &struct_def, const Table *table,
       if (is_present) {
         switch (fd.value.type.base_type) {
            #define FLATBUFFERS_TD(ENUM, IDLTYPE, CTYPE, JTYPE, GTYPE, NTYPE, \
-             PTYPE) \
+                                  PTYPE, RTYPE) \
              case BASE_TYPE_ ## ENUM: \
                 if (!GenField<CTYPE>(fd, table, struct_def.fixed, \
                                      opts, indent + Indent(opts), _text)) { \
@@ -230,7 +230,7 @@ static bool GenStruct(const StructDef &struct_def, const Table *table,
           #undef FLATBUFFERS_TD
           // Generate drop-thru case statements for all pointer types:
           #define FLATBUFFERS_TD(ENUM, IDLTYPE, CTYPE, JTYPE, GTYPE, NTYPE, \
-            PTYPE) \
+                                 PTYPE, RTYPE) \
             case BASE_TYPE_ ## ENUM:
             FLATBUFFERS_GEN_TYPES_POINTER(FLATBUFFERS_TD)
           #undef FLATBUFFERS_TD
