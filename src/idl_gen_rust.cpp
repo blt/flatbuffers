@@ -102,12 +102,12 @@ static void TableStructDefinition(const StructDef &struct_def,
         code += "name = ";
         code += field.name + ",\n";
         code += ThreeIndent +"typeOf = " + TypeName(field);
-        code += ",\n"; 
+        code += ",\n";
         code += ThreeIndent + "slot = " + NumToString(field.value.offset);
-        code += ",\n"; 
+        code += ",\n";
         code += ThreeIndent + "default = " + MapConstant(field);
         if (field.padding) {
-          code += ",\n"; 
+          code += ",\n";
           code += ThreeIndent + "padding = " + NumToString(field.padding);
         }
         code += " }";
@@ -116,7 +116,7 @@ static void TableStructDefinition(const StructDef &struct_def,
     if ( (IsScalar(field.value.type.base_type))
          && (field.value.type.enum_def) ) {
         code += "name = " + field.name;
-        code += ",\n"; 
+        code += ",\n";
         code += ThreeIndent +"typeOf = enum";
         if (field.value.type.enum_def->is_union) {
           code += " " + field.value.type.enum_def->name;
@@ -125,12 +125,12 @@ static void TableStructDefinition(const StructDef &struct_def,
           code += " " + field.value.type.enum_def->name;
         }
         code += " " + TypeName(field);
-        code += ",\n"; 
+        code += ",\n";
         code += ThreeIndent + "slot = " + NumToString(field.value.offset);
-        code += ",\n"; 
+        code += ",\n";
         code += ThreeIndent + "default = " + MapConstant(field);
         if (field.padding) {
-          code += ",\n"; 
+          code += ",\n";
           code += ThreeIndent + "padding = " + NumToString(field.padding);
         }
         code += " }";
@@ -145,7 +145,7 @@ static void TableStructDefinition(const StructDef &struct_def,
       code += ",\n";
       code += ThreeIndent + "slot = " + NumToString(field.value.offset);
       if (field.padding) {
-        code += ",\n"; 
+        code += ",\n";
         code += ThreeIndent + "padding = " + NumToString(field.padding);
       }
       code += " }";
@@ -160,7 +160,7 @@ static void TableStructDefinition(const StructDef &struct_def,
       code += ",\n";
       code += ThreeIndent + "default = " + MapConstant(field);
       if (field.padding) {
-        code += ",\n"; 
+        code += ",\n";
         code += ThreeIndent + "padding = " + NumToString(field.padding);
       }
       code += " }";
@@ -191,7 +191,7 @@ static void TableStructDefinition(const StructDef &struct_def,
       code += ",\n";
       code += ThreeIndent + "default = " + MapConstant(field);
       if (field.padding) {
-        code += ",\n"; 
+        code += ",\n";
         code += ThreeIndent + "padding = " + NumToString(field.padding);
       }
       code += " }";
@@ -474,9 +474,9 @@ static void GenTableBuilders(const StructDef &struct_def,
 static void GenStruct(const StructDef &struct_def,
                       std::string *code_ptr) {
   if (struct_def.generated) return;
-  GenComment(struct_def.doc_comment, code_ptr, nullptr); 
+  GenComment(struct_def.doc_comment, code_ptr, nullptr);
   TableStructDefinition(struct_def, code_ptr);
- 
+
   if (struct_def.fixed) {
     // create a struct constructor function
     GenStructBuilder(struct_def, code_ptr);
@@ -516,7 +516,7 @@ static void GenEnum(const EnumDef &enum_def, std::string *code_ptr) {
   code += "} as ";
   code += GenTypeGet(enum_def.underlying_type);
   code += "}\n\n";
-  
+
 }
 
 // Returns the method name for use with add/put calls.
@@ -555,7 +555,7 @@ static std::string GenNameSpaceExports(const Parser &parser_,
     if (namespace_name.compare(qname) == 0) {
       code += "pub mod " + mod_name + ";\n";
       re_exports += "pub use self::" + mod_name + "::{";
-      re_exports += struct_def.name +", "+ struct_def.name +"Builder};\n"; 
+      re_exports += struct_def.name +", "+ struct_def.name +"Builder};\n";
     }
   }
   std::vector<std::string> components = parser_.namespaces_.back()->components;
@@ -669,7 +669,7 @@ class RustGenerator : public BaseGenerator {
  public:
   RustGenerator(const Parser &parser, const std::string &path,
                   const std::string &file_name)
-      : BaseGenerator(parser, path, file_name){};
+    : BaseGenerator(parser, path, file_name, "", "::"){};
   bool generate() {
     if (!generateEnums()) return false;
     if (!generateStructs()) return false;

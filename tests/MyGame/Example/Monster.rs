@@ -103,7 +103,10 @@ flatbuffers_object!{Table => Monster [
  field => { name = testf3,
             typeOf = f32,
             slot = 58,
-            default = 0.0 }]}
+            default = 0.0 }, 
+ field => { name = testarrayofstring2,
+            typeOf = [string],
+            slot = 60 }]}
 
 /// Builder Trait for `Monster` tables.
 pub trait MonsterBuilder {
@@ -174,11 +177,15 @@ pub trait MonsterBuilder {
     fn add_testf2(&mut self, testf2: f32);
     /// Set the value for field `testf3`.
     fn add_testf3(&mut self, testf3: f32);
+    /// Set the value for field `testarrayofstring2`.
+    fn add_testarrayofstring2(&mut self, testarrayofstring2: flatbuffers::UOffsetT);
+    /// Initializes bookkeeping for writing a new `testarrayofstring2` vector.
+    fn start_testarrayofstring2_vector(&mut self, numElems: usize);
 }
 
 impl MonsterBuilder for flatbuffers::Builder {
     fn start_monster(&mut self) {
-        self.start_object(28);
+        self.start_object(29);
     }
 
     fn add_pos(&mut self, pos: flatbuffers::UOffsetT) {
@@ -317,6 +324,15 @@ impl MonsterBuilder for flatbuffers::Builder {
 
     fn add_testf3(&mut self, testf3: f32) {
         self.add_slot_f32(27, testf3, 0.0)
+    }
+
+    fn add_testarrayofstring2(&mut self, testarrayofstring2: flatbuffers::UOffsetT) {
+        self.add_slot_uoffset(28, testarrayofstring2, 0)
+    }
+
+    /// Initializes bookkeeping for writing a new `testarrayofstring2` vector.
+    fn start_testarrayofstring2_vector(&mut self, numElems: usize) {
+        self.start_vector(4, numElems, 4)
     }
 
 }
