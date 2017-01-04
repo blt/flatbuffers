@@ -2232,3 +2232,4 @@ std::string CPPMakeRule(const Parser &parser, const std::string &path,
 }
 
 }  // namespace flatbuffers
+
