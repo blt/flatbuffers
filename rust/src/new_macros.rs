@@ -6,9 +6,7 @@
 
 //! # Example Enums
 //!
-//! 
-use types::*;
-
+//!
 #[macro_export]
 macro_rules! flatbuffers_object {
     // Table slot accessor functions
@@ -72,7 +70,7 @@ macro_rules! flatbuffers_object {
     (@struct_accessor $i:ident u8 $slot:expr) => {
         ($i.0).get_u8($slot)
     };
-    (@struct_accessor $i:ident i8) $slot:expr => {
+    (@struct_accessor $i:ident i8 $slot:expr) => {
         ($i.0).get_i8($slot)
     };
     (@struct_accessor $i:ident u16 $slot:expr) => {
@@ -110,7 +108,7 @@ macro_rules! flatbuffers_object {
         let v = flatbuffers_object!(@table_accessor $i $si $slot, $default);
         $ty::from(v)
     };
-    // For each @field build 
+    // For each @field build
     //  1. table accessor functions,
     //   2. builder trait definition,
     //   3. builder functions
@@ -153,7 +151,7 @@ macro_rules! flatbuffers_object {
                 $name(table)
             }
         }
-    }
+    };
     (@vector_type $name:ident $size:expr) => {
         impl<T: AsRef<[u8]>> VectorType for $name<T> {
             fn inline_size() -> usize {

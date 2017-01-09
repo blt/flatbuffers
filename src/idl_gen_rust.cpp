@@ -52,7 +52,7 @@ static std::string ModName(std::string &def_name) {
 // Begin by declaring namespace and imports.
 static void BeginFile(std::string *code_ptr) {
   std::string &code = *code_ptr;
-  code += "//! Automatically generated, do not modify.\n\n";
+    code += "//! Automatically generated, do not modify.\n\n";
     // the flatbuffers runtime lib
     code += "use flatbuffers;\n";
     // definitions in the same namepsace

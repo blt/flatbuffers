@@ -29,14 +29,15 @@ fi
 ${sync_cmd} MyGame/Example/*.rs ${rust_src}/bin/test/MyGame/Example/
 ${sync_cmd} MyGame/*.rs ${rust_src}/bin/test/MyGame/
 ${sync_cmd} ../rust/* ${rust_path}
-${sync_cmd} ../rust/macros/* ${rust_path}/macros 
-#{sync_cmd} ../rust/macros/src/* ${rust_path}/macros/src
+${sync_cmd} ../rust/macros/* ${rust_path}/macros
+#${sync_cmd} ../rust/macros/src/* ${rust_path}/macros/src
 ${sync_cmd} ../rust/src/* ${rust_src}
 ${sync_cmd} ../rust/src/bin/* ${rust_src}/bin/
 cp *.mon ${rust_path}/
 
-#run tests
+# run tests
 ( cd $rust_path ; cargo test --features test_idl_gen -- --nocapture)
+
 #run bench
 # cant bench on stable rust as of 1.9.0
 
