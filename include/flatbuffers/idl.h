@@ -369,6 +369,7 @@ struct IDLOptions {
   bool reexport_ts_modules;
   bool protobuf_ascii_alike;
   bool strict_rust;
+  std::string include_prefix;
 
   // Possible options for the more general generator below.
   enum Language {
