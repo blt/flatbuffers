@@ -341,6 +341,7 @@ struct ServiceDef : public Definition {
 // Container of options that may apply to any of the source/text generators.
 struct IDLOptions {
   bool strict_json;
+  bool strict_rust;
   bool skip_js_exports;
   bool use_goog_js_export_format;
   bool output_default_scalars_in_json;
@@ -368,8 +369,8 @@ struct IDLOptions {
   std::string go_namespace;
   bool reexport_ts_modules;
   bool protobuf_ascii_alike;
-  bool strict_rust;
   std::string include_prefix;
+  bool binary_schema_comments;
 
   // Possible options for the more general generator below.
   enum Language {
@@ -395,6 +396,7 @@ struct IDLOptions {
 
   IDLOptions()
     : strict_json(false),
+      strict_rust(false),
       skip_js_exports(false),
       use_goog_js_export_format(false),
       output_default_scalars_in_json(false),
@@ -417,7 +419,6 @@ struct IDLOptions {
       skip_flatbuffers_import(false),
       reexport_ts_modules(true),
       protobuf_ascii_alike(false),
-      strict_rust(false),
       lang(IDLOptions::kJava),
       lang_to_generate(0) {}
 };
