@@ -202,7 +202,8 @@ struct Namespace {
   // With max_components you can request less than the number of components
   // the current namespace has.
   std::string GetFullyQualifiedName(const std::string &name,
-                                    size_t max_components = 1000) const;
+                                    size_t max_components = 1000,
+                                    const std::string &sep = ".") const;
 };
 
 // Base class for all definition types (fields, structs_, enums_).
@@ -356,6 +357,7 @@ struct IDLOptions {
   bool generate_all;
   bool skip_unexpected_fields_in_json;
   bool generate_name_strings;
+  bool strict_rust;
   bool escape_proto_identifiers;
   bool generate_object_based_api;
   std::string cpp_object_api_pointer_type;
@@ -407,6 +409,7 @@ struct IDLOptions {
       generate_all(false),
       skip_unexpected_fields_in_json(false),
       generate_name_strings(false),
+      strict_rust(false),
       escape_proto_identifiers(false),
       generate_object_based_api(false),
       cpp_object_api_pointer_type("std::unique_ptr"),
