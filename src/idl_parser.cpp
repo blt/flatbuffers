@@ -145,8 +145,7 @@ template<> inline CheckedError atot<Offset<void>>(const char *s, Parser &parser,
 }
 
 std::string Namespace::GetFullyQualifiedName(const std::string &name,
-                                             size_t max_components,
-                                             const std::string &sep) const {
+                                             size_t max_components) const {
   // Early exit if we don't have a defined namespace.
   if (components.size() == 0 || !max_components) {
     return name;
@@ -155,7 +154,7 @@ std::string Namespace::GetFullyQualifiedName(const std::string &name,
   for (size_t i = 0; i < std::min(components.size(), max_components);
        i++) {
     if (i) {
-      stream << sep;
+      stream << ".";
     }
     stream << components[i];
   }
