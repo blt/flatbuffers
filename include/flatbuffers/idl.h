@@ -369,8 +369,6 @@ struct IDLOptions {
   std::string go_namespace;
   bool reexport_ts_modules;
   bool protobuf_ascii_alike;
-  std::string include_prefix;
-  bool binary_schema_comments;
 
   // Possible options for the more general generator below.
   enum Language {

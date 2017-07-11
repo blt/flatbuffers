@@ -347,11 +347,7 @@ struct Enum FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
            VerifyOffset(verifier, VT_ATTRIBUTES) &&
            verifier.Verify(attributes()) &&
            verifier.VerifyVectorOfTables(attributes()) &&
-<<<<<<< HEAD
            VerifyOffset(verifier, VT_DOCUMENTATION) &&
-=======
-           VerifyField<flatbuffers::uoffset_t>(verifier, VT_DOCUMENTATION) &&
->>>>>>> Added doc comments to the binary schema.
            verifier.Verify(documentation()) &&
            verifier.VerifyVectorOfStrings(documentation()) &&
            verifier.EndTable();
@@ -499,11 +495,7 @@ struct Field FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
            VerifyOffset(verifier, VT_ATTRIBUTES) &&
            verifier.Verify(attributes()) &&
            verifier.VerifyVectorOfTables(attributes()) &&
-<<<<<<< HEAD
            VerifyOffset(verifier, VT_DOCUMENTATION) &&
-=======
-           VerifyField<flatbuffers::uoffset_t>(verifier, VT_DOCUMENTATION) &&
->>>>>>> Added doc comments to the binary schema.
            verifier.Verify(documentation()) &&
            verifier.VerifyVectorOfStrings(documentation()) &&
            verifier.EndTable();
@@ -666,11 +658,7 @@ struct Object FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
            VerifyOffset(verifier, VT_ATTRIBUTES) &&
            verifier.Verify(attributes()) &&
            verifier.VerifyVectorOfTables(attributes()) &&
-<<<<<<< HEAD
            VerifyOffset(verifier, VT_DOCUMENTATION) &&
-=======
-           VerifyField<flatbuffers::uoffset_t>(verifier, VT_DOCUMENTATION) &&
->>>>>>> Added doc comments to the binary schema.
            verifier.Verify(documentation()) &&
            verifier.VerifyVectorOfStrings(documentation()) &&
            verifier.EndTable();
