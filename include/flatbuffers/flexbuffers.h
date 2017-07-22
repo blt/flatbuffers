@@ -17,12 +17,19 @@
 #ifndef FLATBUFFERS_FLEXBUFFERS_H_
 #define FLATBUFFERS_FLEXBUFFERS_H_
 
+#include <map>
+// Used to select STL variant.
+#include "flatbuffers/base.h"
 // We use the basic binary writing functions from the regular FlatBuffers.
-#include "flatbuffers/flatbuffers.h"
 #include "flatbuffers/util.h"
 
 #ifdef _MSC_VER
 #include <intrin.h>
+#endif
+
+#if defined(_MSC_VER)
+#pragma warning(push)
+#pragma warning(disable: 4127) // C4127: conditional expression is constant
 #endif
 
 namespace flexbuffers {
@@ -85,7 +92,7 @@ inline bool IsFixedTypedVector(Type t) {
   return t >= TYPE_VECTOR_INT2 && t <= TYPE_VECTOR_FLOAT4;
 }
 
-inline Type ToTypedVector(Type t, int fixed_len = 0) {
+inline Type ToTypedVector(Type t, size_t fixed_len = 0) {
   assert(IsTypedVectorElementType(t));
   switch (fixed_len) {
     case 0: return static_cast<Type>(t - TYPE_INT + TYPE_VECTOR_INT);
@@ -104,7 +111,7 @@ inline Type ToTypedVectorElementType(Type t) {
 inline Type ToFixedTypedVectorElementType(Type t, uint8_t *len) {
   assert(IsFixedTypedVector(t));
   auto fixed_type = t - TYPE_VECTOR_INT2;
-  *len = fixed_type / 3 + 2;  // 3 types each, starting from length 2.
+  *len = static_cast<uint8_t>(fixed_type / 3 + 2);  // 3 types each, starting from length 2.
   return static_cast<Type>(fixed_type % 3 + TYPE_INT);
 }
 
@@ -155,7 +162,7 @@ inline double ReadDouble(const uint8_t *data, uint8_t byte_width) {
            byte_width);
 }
 
-const uint8_t *Indirect(const uint8_t *offset, uint8_t byte_width) {
+inline const uint8_t *Indirect(const uint8_t *offset, uint8_t byte_width) {
   return offset - ReadUInt64(offset, byte_width);
 }
 
@@ -163,7 +170,7 @@ template<typename T> const uint8_t *Indirect(const uint8_t *offset) {
   return offset - flatbuffers::ReadScalar<T>(offset);
 }
 
-static BitWidth WidthU(uint64_t u) {
+inline BitWidth WidthU(uint64_t u) {
   #define FLATBUFFERS_GET_FIELD_BIT_WIDTH(value, width) { \
     if (!((u) & ~((1ULL << (width)) - 1ULL))) return BIT_WIDTH_##width; \
   }
@@ -174,12 +181,12 @@ static BitWidth WidthU(uint64_t u) {
   return BIT_WIDTH_64;
 }
 
-static BitWidth WidthI(int64_t i) {
+inline BitWidth WidthI(int64_t i) {
   auto u = static_cast<uint64_t>(i) << 1;
   return WidthU(i >= 0 ? u : ~u);
 }
 
-static BitWidth WidthF(double f) {
+inline BitWidth WidthF(double f) {
   return static_cast<double>(static_cast<float>(f)) == f ? BIT_WIDTH_32
                                                          : BIT_WIDTH_64;
 }
@@ -212,6 +219,7 @@ class String : public Sized {
 
   size_t length() const { return size(); }
   const char *c_str() const { return reinterpret_cast<const char *>(data_); }
+  std::string str() const { return std::string(c_str(), length()); }
 
   static String EmptyString() {
     static const uint8_t empty_string[] = { 0/*len*/, 0/*terminator*/ };
@@ -451,25 +459,61 @@ class Reference {
   }
 
   // Unlike AsString(), this will convert any type to a std::string.
-  std::string ToString() const {
+  std::string ToString() {
+    std::string s;
+    ToString(false, false, s);
+    return s;
+  }
+
+  // Convert any type to a JSON-like string. strings_quoted determines if
+  // string values at the top level receive "" quotes (inside other values
+  // they always do). keys_quoted determines if keys are quoted, at any level.
+  // TODO(wvo): add further options to have indentation/newlines.
+  void ToString(bool strings_quoted, bool keys_quoted, std::string &s) const {
     if (type_ == TYPE_STRING) {
-      return String(Indirect(), byte_width_).c_str();
+      String str(Indirect(), byte_width_);
+      if (strings_quoted) {
+        flatbuffers::EscapeString(str.c_str(), str.length(), &s, true);
+      } else {
+        s.append(str.c_str(), str.length());
+      }
     } else if (IsKey()) {
-      return AsKey();
+      auto str = AsKey();
+      if (keys_quoted) {
+        flatbuffers::EscapeString(str, strlen(str), &s, true);
+      } else {
+        s += str;
+      }
     } else if (IsInt()) {
-      return flatbuffers::NumToString(AsInt64());
+      s += flatbuffers::NumToString(AsInt64());
     } else if (IsUInt()) {
-      return flatbuffers::NumToString(AsUInt64());
+      s += flatbuffers::NumToString(AsUInt64());
     } else if (IsFloat()) {
-      return flatbuffers::NumToString(AsDouble());
+      s += flatbuffers::NumToString(AsDouble());
     } else if (IsNull()) {
-      return "null";
+      s += "null";
     } else if (IsMap()) {
-      return "{..}";  // TODO: show elements.
+      s += "{ ";
+      auto m = AsMap();
+      auto keys = m.Keys();
+      auto vals = m.Values();
+      for (size_t i = 0; i < keys.size(); i++) {
+        keys[i].ToString(true, keys_quoted, s);
+        s += ": ";
+        vals[i].ToString(true, keys_quoted, s);
+        if (i < keys.size() - 1) s += ", ";
+      }
+      s += " }";
     } else if (IsVector()) {
-      return "[..]";  // TODO: show elements.
+      s += "[ ";
+      auto v = AsVector();
+      for (size_t i = 0; i < v.size(); i++) {
+        v[i].ToString(true, keys_quoted, s);
+        if (i < v.size() - 1) s += ", ";
+      }
+      s += " ]";
     } else {
-      return "(?)";
+      s += "(?)";
     }
   }
 
@@ -601,7 +645,7 @@ class Reference {
 
   template<typename T> bool Mutate(const uint8_t *dest, T t, size_t byte_width,
                                    BitWidth value_width) {
-    auto fits = (1U << value_width) <= byte_width;
+    auto fits = static_cast<size_t>(static_cast<size_t>(1U) << value_width) <= byte_width;
     if (fits) {
       t = flatbuffers::EndianScalar(t);
       memcpy(const_cast<uint8_t *>(dest), &t, byte_width);
@@ -701,7 +745,7 @@ inline Reference GetRoot(const uint8_t *buffer, size_t size) {
 }
 
 inline Reference GetRoot(const std::vector<uint8_t> &buffer) {
-  return GetRoot(buffer.data(), buffer.size());
+  return GetRoot(flatbuffers::vector_data(buffer), buffer.size());
 }
 
 // Flags that configure how the Builder behaves.
@@ -738,6 +782,17 @@ class Builder FLATBUFFERS_FINAL_CLASS {
   const std::vector<uint8_t> &GetBuffer() const {
     Finished();
     return buf_;
+  }
+
+  // Reset all state so we can re-use the buffer.
+  void Clear() {
+    buf_.clear();
+    stack_.clear();
+    finished_ = false;
+    // flags_ remains as-is;
+    force_min_bit_width_ = BIT_WIDTH_8;
+    key_pool.clear();
+    string_pool.clear();
   }
 
   // All value constructing functions below have two versions: one that
@@ -860,7 +915,7 @@ class Builder FLATBUFFERS_FINAL_CLASS {
     return CreateBlob(data, len, 0, TYPE_BLOB);
   }
   size_t Blob(const std::vector<uint8_t> &v) {
-    return CreateBlob(v.data(), v.size(), 0, TYPE_BLOB);
+    return CreateBlob(flatbuffers::vector_data(v), v.size(), 0, TYPE_BLOB);
   }
 
   // TODO(wvo): support all the FlexBuffer types (like flexbuffers::String),
@@ -904,11 +959,15 @@ class Builder FLATBUFFERS_FINAL_CLASS {
     // step automatically when appliccable, and encourage people to write in
     // sorted fashion.
     // std::sort is typically already a lot faster on sorted data though.
-    auto dict = reinterpret_cast<TwoValue *>(stack_.data() + start);
+    auto dict =
+        reinterpret_cast<TwoValue *>(flatbuffers::vector_data(stack_) +
+                                     start);
     std::sort(dict, dict + len,
               [&](const TwoValue &a, const TwoValue &b) -> bool {
-      auto as = reinterpret_cast<const char *>(buf_.data() + a.key.u_);
-      auto bs = reinterpret_cast<const char *>(buf_.data() + b.key.u_);
+      auto as = reinterpret_cast<const char *>(
+          flatbuffers::vector_data(buf_) + a.key.u_);
+      auto bs = reinterpret_cast<const char *>(
+          flatbuffers::vector_data(buf_) + b.key.u_);
       auto comp = strcmp(as, bs);
       // If this assertion hits, you've added two keys with the same value to
       // this map.
@@ -933,13 +992,25 @@ class Builder FLATBUFFERS_FINAL_CLASS {
     f();
     return EndVector(start, false, false);
   }
+  template <typename F, typename T> size_t Vector(F f, T &state) {
+    auto start = StartVector();
+    f(state);
+    return EndVector(start, false, false);
+  }
   template<typename F> size_t Vector(const char *key, F f) {
     auto start = StartVector(key);
     f();
     return EndVector(start, false, false);
   }
+  template <typename F, typename T> size_t Vector(const char *key, F f,
+                                                  T &state) {
+    auto start = StartVector(key);
+    f(state);
+    return EndVector(start, false, false);
+  }
+
   template<typename T> void Vector(const T *elems, size_t len) {
-    if (std::is_scalar<T>::value) {
+    if (flatbuffers::is_scalar<T>::value) {
       // This path should be a lot quicker and use less space.
       ScalarVector(elems, len, false);
     } else {
@@ -954,7 +1025,7 @@ class Builder FLATBUFFERS_FINAL_CLASS {
     Vector(elems, len);
   }
   template<typename T> void Vector(const std::vector<T> &vec) {
-    Vector(vec.data(), vec.size());
+    Vector(flatbuffers::vector_data(vec), vec.size());
   }
 
   template<typename F> size_t TypedVector(F f) {
@@ -962,9 +1033,20 @@ class Builder FLATBUFFERS_FINAL_CLASS {
     f();
     return EndVector(start, true, false);
   }
+  template <typename F, typename T> size_t TypedVector(F f, T &state) {
+    auto start = StartVector();
+    f(state);
+    return EndVector(start, true, false);
+  }
   template<typename F> size_t TypedVector(const char *key, F f) {
     auto start = StartVector(key);
     f();
+    return EndVector(start, true, false);
+  }
+  template <typename F, typename T> size_t TypedVector(const char *key, F f,
+                                                       T &state) {
+    auto start = StartVector(key);
+    f(state);
     return EndVector(start, true, false);
   }
 
@@ -973,7 +1055,7 @@ class Builder FLATBUFFERS_FINAL_CLASS {
     // regular typed vector.
     assert(len >= 2 && len <= 4);
     // And only scalar values.
-    assert(std::is_scalar<T>::value);
+    assert(flatbuffers::is_scalar<T>::value);
     return ScalarVector(elems, len, true);
   }
 
@@ -988,9 +1070,20 @@ class Builder FLATBUFFERS_FINAL_CLASS {
     f();
     return EndMap(start);
   }
+  template <typename F, typename T> size_t Map(F f, T &state) {
+    auto start = StartMap();
+    f(state);
+    return EndMap(start);
+  }
   template<typename F> size_t Map(const char *key, F f) {
     auto start = StartMap(key);
     f();
+    return EndMap(start);
+  }
+  template <typename F, typename T> size_t Map(const char *key, F f,
+                                               T &state) {
+    auto start = StartMap(key);
+    f(state);
     return EndMap(start);
   }
   template<typename T> void Map(const std::map<std::string, T> &map) {
@@ -1072,7 +1165,7 @@ class Builder FLATBUFFERS_FINAL_CLASS {
     auto byte_width = 1U << alignment;
     buf_.insert(buf_.end(), flatbuffers::PaddingBytes(buf_.size(), byte_width),
                 0);
-    return byte_width;
+    return static_cast<uint8_t>(byte_width);
   }
 
   void WriteBytes(const void *val, size_t size) {
@@ -1081,8 +1174,8 @@ class Builder FLATBUFFERS_FINAL_CLASS {
                 reinterpret_cast<const uint8_t *>(val) + size);
   }
 
-  // For values T >= byte_width
-  template<typename T> void Write(T val, uint8_t byte_width) {
+  template<typename T> void Write(T val, size_t byte_width) {
+    assert(sizeof(T) >= byte_width);
     val = flatbuffers::EndianScalar(val);
     WriteBytes(&val, byte_width);
   }
@@ -1121,10 +1214,10 @@ class Builder FLATBUFFERS_FINAL_CLASS {
   }
 
   template<typename T> static Type GetScalarType() {
-    assert(std::is_scalar<T>::value);
-    return std::is_floating_point<T>::value
+    assert(flatbuffers::is_scalar<T>::value);
+    return flatbuffers::is_floating_point<T>::value
         ? TYPE_FLOAT
-        : (std::is_unsigned<T>::value ? TYPE_UINT : TYPE_INT);
+        : (flatbuffers::is_unsigned<T>::value ? TYPE_UINT : TYPE_INT);
   }
 
   struct Value {
@@ -1176,7 +1269,8 @@ class Builder FLATBUFFERS_FINAL_CLASS {
           auto offset = offset_loc - u_;
           // Does it fit?
           auto bit_width = WidthU(offset);
-          if (1U << bit_width == byte_width) return bit_width;
+          if (static_cast<size_t>(static_cast<size_t>(1U) << bit_width) == byte_width)
+            return bit_width;
         }
         assert(false);  // Must match one of the sizes above.
         return BIT_WIDTH_64;
@@ -1231,7 +1325,7 @@ class Builder FLATBUFFERS_FINAL_CLASS {
     // TODO: instead of asserting, could write vector with larger elements
     // instead, though that would be wasteful.
     assert(WidthU(len) <= bit_width);
-    if (!fixed) Write(len, byte_width);
+    if (!fixed) Write<uint64_t>(len, byte_width);
     auto vloc = buf_.size();
     for (size_t i = 0; i < len; i++) Write(elems[i], byte_width);
     stack_.push_back(Value(static_cast<uint64_t>(vloc),
@@ -1273,9 +1367,9 @@ class Builder FLATBUFFERS_FINAL_CLASS {
     // Write vector. First the keys width/offset if available, and size.
     if (keys) {
       WriteOffset(keys->u_, byte_width);
-      Write(1U << keys->min_bit_width_, byte_width);
+      Write<uint64_t>(1ULL << keys->min_bit_width_, byte_width);
     }
-    if (!fixed) Write(vec_len, byte_width);
+    if (!fixed) Write<uint64_t>(vec_len, byte_width);
     // Then the actual data.
     auto vloc = buf_.size();
     for (size_t i = start; i < stack_.size(); i += step) {
@@ -1310,9 +1404,11 @@ class Builder FLATBUFFERS_FINAL_CLASS {
 
   struct KeyOffsetCompare {
     KeyOffsetCompare(const std::vector<uint8_t> &buf) : buf_(&buf) {}
-    bool operator() (size_t a, size_t b) const {
-      auto stra = reinterpret_cast<const char *>(buf_->data() + a);
-      auto strb = reinterpret_cast<const char *>(buf_->data() + b);
+    bool operator()(size_t a, size_t b) const {
+      auto stra =
+          reinterpret_cast<const char *>(flatbuffers::vector_data(*buf_) + a);
+      auto strb =
+          reinterpret_cast<const char *>(flatbuffers::vector_data(*buf_) + b);
       return strcmp(stra, strb) < 0;
     }
     const std::vector<uint8_t> *buf_;
@@ -1321,9 +1417,11 @@ class Builder FLATBUFFERS_FINAL_CLASS {
   typedef std::pair<size_t, size_t> StringOffset;
   struct StringOffsetCompare {
     StringOffsetCompare(const std::vector<uint8_t> &buf) : buf_(&buf) {}
-    bool operator() (const StringOffset &a, const StringOffset &b) const {
-      auto stra = reinterpret_cast<const char *>(buf_->data() + a.first);
-      auto strb = reinterpret_cast<const char *>(buf_->data() + b.first);
+    bool operator()(const StringOffset &a, const StringOffset &b) const {
+      auto stra = reinterpret_cast<const char *>(flatbuffers::vector_data(*buf_) +
+                                                 a.first);
+      auto strb = reinterpret_cast<const char *>(flatbuffers::vector_data(*buf_) +
+                                                 b.first);
       return strncmp(stra, strb, std::min(a.second, b.second) + 1) < 0;
     }
     const std::vector<uint8_t> *buf_;
@@ -1337,5 +1435,9 @@ class Builder FLATBUFFERS_FINAL_CLASS {
 };
 
 }  // namespace flexbuffers
+
+#if defined(_MSC_VER)
+#pragma warning(pop)
+#endif
 
 #endif  // FLATBUFFERS_FLEXBUFFERS_H_
